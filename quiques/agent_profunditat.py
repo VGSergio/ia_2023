@@ -1,11 +1,8 @@
-""" Fitxer que conté l'agent barca en profunditat.
+from collections import deque
 
-S'ha d'implementar el mètode:
-    actua()
-"""
 from ia_2022 import entorn
 from quiques.agent import Barca, Estat
-from quiques.entorn import AccionsBarca
+from quiques.entorn import AccionsBarca, SENSOR
 
 
 class BarcaProfunditat(Barca):
@@ -16,6 +13,40 @@ class BarcaProfunditat(Barca):
         self.__accions = None
 
     def actua(
-            self, percepcio: entorn.Percepcio
+        self, percepcio: entorn.Percepcio
     ) -> entorn.Accio | tuple[entorn.Accio, object]:
-        pass
+        if self.__accions is None:
+            self._cerca(
+                Estat(
+                    percepcio[SENSOR.LLOC],
+                    percepcio[SENSOR.LLOP_ESQ],
+                    percepcio[SENSOR.QUICA_ESQ],
+                )
+            )
+
+        return (
+            (AccionsBarca.MOURE, self.__accions.pop())
+            if self.__accions
+            else AccionsBarca.ATURAR
+        )
+
+    def _cerca(self, estat: Estat):
+        self.__oberts = deque([estat])
+        self.__tancats = set()
+
+        while self.__oberts and self.__accions is None:
+            actual = self.__oberts.popleft()
+            
+            if self.__tancats.add(actual):
+                continue
+
+            if actual.es_meta():
+                self.__accions = actual.accions_previes
+            else:
+                self.__oberts.extend(
+                    [
+                        hijo
+                        for hijo in actual.genera_fill()
+                        if hijo.es_segur() and hijo not in self.__tancats
+                    ]
+                )

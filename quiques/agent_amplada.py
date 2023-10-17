@@ -1,6 +1,8 @@
+from collections import deque
+
 from ia_2022 import entorn
 from quiques.agent import Barca, Estat
-from quiques.entorn import SENSOR
+from quiques.entorn import AccionsBarca, SENSOR
 
 
 class BarcaAmplada(Barca):
@@ -11,9 +13,40 @@ class BarcaAmplada(Barca):
         self.__accions = None
 
     def actua(
-            self, percepcio: entorn.Percepcio
+        self, percepcio: entorn.Percepcio
     ) -> entorn.Accio | tuple[entorn.Accio, object]:
-        estat = Estat(local_barca=percepcio[SENSOR.LLOC], polls_esq=percepcio[SENSOR.QUICA_ESQ],
-                      llops_esq=percepcio[SENSOR.LLOP_ESQ])
+        if self.__accions is None:
+            self._cerca(
+                Estat(
+                    percepcio[SENSOR.LLOC],
+                    percepcio[SENSOR.LLOP_ESQ],
+                    percepcio[SENSOR.QUICA_ESQ],
+                )
+            )
 
-        pass
+        return (
+            (AccionsBarca.MOURE, self.__accions.pop())
+            if self.__accions
+            else AccionsBarca.ATURAR
+        )
+
+    def _cerca(self, estat: Estat):
+        self.__oberts = deque([estat])
+        self.__tancats = set()
+
+        while self.__oberts and self.__accions is None:
+            actual = self.__oberts.popleft()
+
+            if self.__tancats.add(actual):
+                continue
+
+            if actual.es_meta():
+                self.__accions = actual.accions_previes
+            else:
+                self.__oberts.extend(
+                    [
+                        hijo
+                        for hijo in actual.genera_fill()
+                        if hijo.es_segur() and hijo not in self.__tancats
+                    ]
+                )
