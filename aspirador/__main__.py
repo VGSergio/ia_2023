@@ -1,3 +1,6 @@
+import sys
+sys.path.append("C:\\Users\\Sergio\\Desktop\\ia_2023")
+
 from aspirador import agent, joc
 
 

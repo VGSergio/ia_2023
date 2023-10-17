@@ -1,23 +1,8 @@
-""" Fitxer que conté els diferents agents aspiradors.
-
-Percepcions:
-    Sensor.LLOC: [Localitzacio.HABITACIO_ESQ, Localitzacio.HABITACIO_DRET]
-    Sensor.ESTAT: [EstatHabitacio.NET, EstatHabitacio.BRUT]
-
-Accions:
-    AccionsAspirador.DRETA
-    AccionsAspirador.ESQUERRA
-    AccionsAspirador.ATURA
-    AccionsAspirador.ASPIRA
-
-Autor: Miquel Miró Nicolau (UIB), 2022
-"""
 import abc
 
 import pygame
 
-from aspirador.entorn import (AccionsAspirador, Sensor, EstatHabitacio,
-                              Localitzacio)
+from aspirador.entorn import AccionsAspirador, Sensor, EstatHabitacio, Localitzacio
 from ia_2022 import agent
 from ia_2022 import entorn
 
@@ -45,14 +30,18 @@ class AspiradorTaula(Aspirador):
     }
 
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio:
-        return AspiradorTaula.TAULA[
-            (percepcio[Sensor.LLOC], percepcio[Sensor.ESTAT])
-        ]
+        return AspiradorTaula.TAULA[(percepcio[Sensor.LLOC], percepcio[Sensor.ESTAT])]
 
 
 class AspiradorReflex(Aspirador):
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio:
-        """ IMPLEMENTAR """
+        if percepcio[Sensor.ESTAT] == EstatHabitacio.BRUT:
+            return AccionsAspirador.ASPIRA
+        else:
+            if percepcio[Sensor.LLOC] == Localitzacio.HABITACIO_ESQ:
+                return AccionsAspirador.DRETA
+            else:
+                return AccionsAspirador.ESQUERRA
 
 
 class AspiradorMemoria(Aspirador):
