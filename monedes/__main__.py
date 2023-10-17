@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append("C:\\Users\\Sergio\\Desktop\\ia_2023")
+
 from monedes import agent, joc
 
 
