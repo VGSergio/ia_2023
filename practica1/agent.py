@@ -1,6 +1,7 @@
 from collections import deque
 from copy import deepcopy
 from queue import PriorityQueue
+import time
 
 from ia_2022 import entorn
 from practica1 import joc
@@ -311,13 +312,17 @@ class AgentProfunditat(joc.Agent):
         self, percepcio: entorn.Percepcio
     ) -> entorn.Accio | tuple[entorn.Accio, object]:
         if self.__accions is None:
-            self._cerca(
-                EstatProfunditat(
-                    taulell=percepcio[SENSOR.TAULELL],
-                    n=percepcio[SENSOR.MIDA][0],
-                    tipus=self.jugador,
+            while True:
+                start = time.time()
+                self._cerca(
+                    EstatProfunditat(
+                        taulell=percepcio[SENSOR.TAULELL],
+                        n=percepcio[SENSOR.MIDA][0],
+                        tipus=self.jugador,
+                    )
                 )
-            )
+                print(time.time() - start)
+                self.__accions = None
 
         # Return the solution from the leave to the root
         return self.__accions.pop() if self.__accions else Accio.ESPERAR
@@ -359,13 +364,18 @@ class AgentAEstrella(joc.Agent):
         self, percepcio: entorn.Percepcio
     ) -> entorn.Accio | tuple[entorn.Accio, object]:
         if self.__accions is None:
-            self._cerca(
-                EstatAEstrella(
-                    taulell=percepcio[SENSOR.TAULELL],
-                    n=percepcio[SENSOR.MIDA][0],
-                    tipus=self.jugador,
+            while True:
+                start = time.time()
+
+                self._cerca(
+                    EstatAEstrella(
+                        taulell=percepcio[SENSOR.TAULELL],
+                        n=percepcio[SENSOR.MIDA][0],
+                        tipus=self.jugador,
+                    )
                 )
-            )
+
+                print(time.time() - start)
 
         # Return the solution from the leave to the root
         return self.__accions.pop() if self.__accions else Accio.ESPERAR
