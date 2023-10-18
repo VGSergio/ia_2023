@@ -95,12 +95,15 @@ class EstatProfunditat:
                 if casella == TipusCasella.LLIURE:
                     continue
 
-                # Check horizontal, vertical, and both diagonal directions
                 directions = [
+                    (0, -1),  # left
                     (0, 1),  # right
+                    (-1, 0),  # top
                     (1, 0),  # down
-                    (-1, 1),  # diagonal top
-                    (1, 1),  # diagonal bottom
+                    (-1, 1),  # diagonal top right
+                    (1, 1),  # diagonal bottom right
+                    (1, -1),  # diagonal bottom left
+                    (-1, -1),  # diagonal bottom left
                 ]
 
                 for dx, dy in directions:
@@ -118,14 +121,12 @@ class EstatProfunditat:
 
     def genera_fills(self) -> list["EstatProfunditat"]:
         return [
-            deepcopy(
-                EstatProfunditat(
-                    taulell=self.__fer_accio(accio),
-                    n=self.__n,
-                    tipus=self.__tipus,
-                    pare=self,
-                    accions_previes=self.__accions_previes + [accio],
-                )
+            EstatProfunditat(
+                taulell=deepcopy(self).__fer_accio(accio),
+                n=self.__n,
+                tipus=self.__tipus,
+                pare=self,
+                accions_previes=self.__accions_previes + [accio],
             )
             for accio in self.__acc_pos
             if self.__legal(accio)
@@ -146,6 +147,8 @@ class EstatAEstrella:
         self.__tipus = tipus
         self.__pare = pare
         self.__accions_previes = accions_previes or []
+        self.__cost = pare.__cost + 1 if pare else 0
+        self.__heuristica = self.__calcul_heuristica() if accions_previes else 1000
         self.__acc_pos = [
             (Accio.POSAR, (row, col)) for row in range(n) for col in range(n)
         ]
@@ -196,6 +199,9 @@ class EstatAEstrella:
             + "\n"
         )
 
+    def __lt__(self, other: "EstatAEstrella") -> int:
+        return self.__heuristica - other.__heuristica
+
     def __fer_accio(self, accio: tuple[Accio.POSAR, tuple[int, int]]) -> str:
         _, pos = accio
         taulell = self.__taulell
@@ -205,6 +211,36 @@ class EstatAEstrella:
     def __legal(self, accio: tuple[Accio.POSAR, tuple[int, int]]) -> bool:
         _, pos = accio
         return self.__taulell[pos[0]][pos[1]] == TipusCasella.LLIURE
+
+    def __calcul_heuristica(self) -> int:
+        n = self.__n
+        taulell = self.__taulell
+        row, col = self.__accions_previes[-1][1]
+        casella = taulell[row][col]
+        count = 0
+
+        directions = [
+            (0, -1),  # left
+            (0, 1),  # right
+            (-1, 0),  # top
+            (1, 0),  # down
+            (-1, 1),  # diagonal top right
+            (1, 1),  # diagonal bottom right
+            (1, -1),  # diagonal bottom left
+            (-1, -1),  # diagonal bottom left
+        ]
+
+        for dx, dy in directions:
+            x, y = row + dx, col + dy
+
+            while max(0, row - 3) <= x < min(n, row + 4) and max(0, col - 3) <= y < min(
+                n, col + 4
+            ):
+                if casella == taulell[x][y]:
+                    count += 1
+                x, y = x + dx, y + dy
+
+        return 4 * 4 - 1 - count
 
     def accions_previes(self):
         return self.__accions_previes
@@ -220,12 +256,15 @@ class EstatAEstrella:
                 if casella == TipusCasella.LLIURE:
                     continue
 
-                # Check horizontal, vertical, and both diagonal directions
                 directions = [
+                    (0, -1),  # left
                     (0, 1),  # right
+                    (-1, 0),  # top
                     (1, 0),  # down
-                    (-1, 1),  # diagonal top
-                    (1, 1),  # diagonal bottom
+                    (-1, 1),  # diagonal top right
+                    (1, 1),  # diagonal bottom right
+                    (1, -1),  # diagonal bottom left
+                    (-1, -1),  # diagonal bottom left
                 ]
 
                 for dx, dy in directions:
@@ -243,18 +282,19 @@ class EstatAEstrella:
 
     def genera_fills(self) -> list["EstatAEstrella"]:
         return [
-            deepcopy(
-                EstatAEstrella(
-                    taulell=self.__fer_accio(accio),
-                    n=self.__n,
-                    tipus=self.__tipus,
-                    pare=self,
-                    accions_previes=self.__accions_previes + [accio],
-                )
+            EstatAEstrella(
+                taulell=deepcopy(self).__fer_accio(accio),
+                n=self.__n,
+                tipus=self.__tipus,
+                pare=self,
+                accions_previes=self.__accions_previes + [accio],
             )
             for accio in self.__acc_pos
             if self.__legal(accio)
         ]
+
+    def valor(self) -> int:
+        return self.__cost + self.__heuristica
 
 
 class AgentProfunditat(joc.Agent):
@@ -320,7 +360,7 @@ class AgentAEstrella(joc.Agent):
     ) -> entorn.Accio | tuple[entorn.Accio, object]:
         if self.__accions is None:
             self._cerca(
-                EstatProfunditat(
+                EstatAEstrella(
                     taulell=percepcio[SENSOR.TAULELL],
                     n=percepcio[SENSOR.MIDA][0],
                     tipus=self.jugador,
@@ -333,11 +373,13 @@ class AgentAEstrella(joc.Agent):
         return self.__accions.pop(0) if self.__accions else Accio.ESPERAR
 
     def _cerca(self, estat: EstatAEstrella):
-        self.__oberts = deque([estat])
+        self.__oberts = PriorityQueue()
         self.__tancats = set()
 
-        while self.__oberts and self.__accions is None:
-            actual = self.__oberts.popleft()
+        self.__oberts.put((estat.valor(), estat))
+
+        while not self.__oberts.empty() and self.__accions is None:
+            _, actual = self.__oberts.get()
 
             if self.__tancats.add(actual):
                 continue
@@ -345,9 +387,6 @@ class AgentAEstrella(joc.Agent):
             if actual.es_meta():
                 self.__accions = actual.accions_previes()
             else:
-                fills = [
-                    hijo for hijo in actual.genera_fills() if hijo not in self.__tancats
-                ]
-                self.__oberts.extendleft(
-                    reversed(fills)
-                )  # reversed for proper order insertion
+                for hijo in actual.genera_fills():
+                    if hijo not in self.__tancats:
+                        self.__oberts.put((hijo.valor(), hijo))
