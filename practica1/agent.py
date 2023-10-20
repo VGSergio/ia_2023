@@ -10,6 +10,7 @@ from practica1.entorn import Accio, SENSOR, TipusCasella
 # Definim un tipus per la colocació de una peça
 TipusPosarPeça = Tuple[Accio, Tuple[int, int]]
 
+
 class EstatBase:
     def __init__(
         self,
@@ -57,6 +58,7 @@ class EstatBase:
     def __repr__(self) -> str:
         return str(self)
 
+    # Devuelve una copia del estado actual actualizado con el movimiento pasado por argumento
     def __fer_accio(
         self, accio: Tuple[Accio.POSAR, Tuple[int, int]]
     ) -> List[List[TipusCasella]]:
@@ -65,6 +67,7 @@ class EstatBase:
         taulell[pos[0]][pos[1]] = self._tipus
         return taulell
 
+    # Comprueba que la casilla este libre
     def __legal(self, accio: Tuple[Accio.POSAR, Tuple[int, int]]) -> bool:
         _, pos = accio
         return self._taulell[pos[0]][pos[1]] == TipusCasella.LLIURE
@@ -72,6 +75,8 @@ class EstatBase:
     def accions_previes(self) -> List[TipusPosarPeça]:
         return self._accions_previes
 
+    # Empezando en la esquina superior izquierda, comprueba para cada casilla si hay un grupo de 4 piezas iguales contiguas.
+    # Al empezar en la esquina superior izquierda no comprobamos la parte izquierda ni superior de la casilla analizada
     def es_meta(self) -> bool:
         n = self._n
         taulell = self._taulell
@@ -149,6 +154,12 @@ class EstatAEstrella(EstatBase):
     def __lt__(self, other: "EstatAEstrella") -> int:
         return self.__heuristica - other.__heuristica
 
+    """
+        Cuenta cuentas piezas del mismo tipo hay en cada una de las direcciones 
+        El máximo de piezas que puede contar es de (4 (conecta 4) - 1 (la pieza colocada)) * 8 (direcciones posibles)
+        Para que la heuristica sea menor cuanto más buena sea la posición devolvemos max - count
+    """
+
     def __calcul_heuristica(self) -> int:
         n = self._n
         taulell = self._taulell
@@ -170,14 +181,14 @@ class EstatAEstrella(EstatBase):
         for dx, dy in directions:
             x, y = row + dx, col + dy
 
-            while max(0, row - 3) <= x < min(n, row + 4) and max(0, col - 3) <= y < min(
-                n, col + 4
+            while max(0, row - 3) <= x < min(n, row + 3) and max(0, col - 3) <= y < min(
+                n, col + 3
             ):
                 if casella == taulell[x][y]:
                     count += 1
                 x, y = x + dx, y + dy
 
-        return 4 * 4 - 1 - count
+        return 3 * len(directions) - count
 
     def valor(self) -> int:
         return self.__cost + self.__heuristica
