@@ -58,6 +58,11 @@ class EstatBase:
     def __repr__(self) -> str:
         return str(self)
 
+    def __cambia_jugador(self) -> TipusCasella:
+        return (
+            TipusCasella.CARA if self._tipus == TipusCasella.CREU else TipusCasella.CREU
+        )
+
     # Devuelve una copia del estado actual actualizado con el movimiento pasado por argumento
     def __fer_accio(
         self, accio: Tuple[Accio.POSAR, Tuple[int, int]]
@@ -80,12 +85,14 @@ class EstatBase:
     def es_meta(self) -> bool:
         n = self._n
         taulell = self._taulell
+        casella_lliure = False
 
         for i in range(n):
             for j in range(n):
                 casella = taulell[i][j]
 
                 if casella == TipusCasella.LLIURE:
+                    casella_lliure = True
                     continue
 
                 directions = [
@@ -110,14 +117,16 @@ class EstatBase:
                     if count >= 4:
                         return True
 
-        return False
+        # No casella lliure -> Empat -> Estat final
+        # Casella lliure -> Peçes per posar -> No final
+        return not casella_lliure
 
-    def genera_fills(self) -> List["EstatBase"]:
+    def genera_fills(self, cambia_jugador: bool = False) -> List["EstatBase"]:
         return [
             self.__class__(
                 taulell=self.__fer_accio(accio),
                 n=self._n,
-                tipus=self._tipus,
+                tipus=self._tipus if not cambia_jugador else self.__cambia_jugador(),
                 pare=self,
                 accions_previes=self._accions_previes + [accio],
             )
@@ -149,7 +158,7 @@ class EstatAEstrella(EstatBase):
     ) -> None:
         super().__init__(taulell, tipus, n, pare, accions_previes)
         self.__cost = pare.__cost + 1 if pare else 0
-        self.__heuristica = self.__calcul_heuristica() if accions_previes else 1000
+        self.__heuristica = self._calcul_heuristica() if accions_previes else 1000
 
     def __lt__(self, other: "EstatAEstrella") -> int:
         return self.__heuristica - other.__heuristica
@@ -160,7 +169,7 @@ class EstatAEstrella(EstatBase):
         Para que la heuristica sea menor cuanto más buena sea la posición devolvemos max - count
     """
 
-    def __calcul_heuristica(self) -> int:
+    def _calcul_heuristica(self) -> int:
         n = self._n
         taulell = self._taulell
         row, col = self._accions_previes[-1][1]
@@ -192,6 +201,10 @@ class EstatAEstrella(EstatBase):
 
     def valor(self) -> int:
         return self.__cost + self.__heuristica
+
+
+class EstatMinMax(EstatBase):
+    pass
 
 
 class AgentProfunditat(joc.Agent):
@@ -287,3 +300,22 @@ class AgentAEstrella(joc.Agent):
                 for hijo in actual.genera_fills():
                     if hijo not in self.__tancats:
                         self.__oberts.put((hijo.valor(), hijo))
+
+
+class AgentMinMax(joc.Agent):
+    def __init__(self, nom):
+        super(AgentMinMax, self).__init__(nom)
+        self.__accions = None
+        self.__oberts = None
+        self.__tancats = None
+
+    def pinta(self, display):
+        pass
+
+    def actua(
+        self, percepcio: entorn.Percepcio
+    ) -> entorn.Accio | tuple[entorn.Accio, object]:
+        pass
+
+    def _cerca(self, estat: EstatMinMax):
+        pass
