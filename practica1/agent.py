@@ -82,44 +82,42 @@ class EstatBase:
 
     # Empezando en la esquina superior izquierda, comprueba para cada casilla si hay un grupo de 4 piezas iguales contiguas.
     # Al empezar en la esquina superior izquierda no comprobamos la parte izquierda ni superior de la casilla analizada
-    def es_meta(self) -> bool:
+    def es_meta(self) -> Tuple[bool, int]:
         n = self._n
         taulell = self._taulell
-        casella_lliure = False
+        final = True
+        contrari = self._cambia_jugador()
 
         for i in range(n):
             for j in range(n):
                 casella = taulell[i][j]
 
                 if casella == TipusCasella.LLIURE:
-                    casella_lliure = True
+                    final = False
                     continue
 
                 directions = [
-                    # (0, -1),  # left
                     (0, 1),  # right
-                    # (-1, 0),  # top
                     (1, 0),  # down
                     (-1, 1),  # diagonal top right
                     (1, 1),  # diagonal bottom right
-                    # (1, -1),  # diagonal bottom left
-                    # (-1, -1), # diagonal bottom left
                 ]
 
                 for dx, dy in directions:
                     count = 0
                     x, y = i, j
 
-                    while 0 <= x < n and 0 <= y < n and taulell[x][y] == casella:
-                        count += 1
+                    while 0 <= x < n and 0 <= y < n:
+                        if taulell[x][y] == self._tipus:
+                            count += 1
+                        if taulell[x][y] == contrari:
+                            count -= 1
                         x, y = x + dx, y + dy
 
-                    if count >= 4:
-                        return True
+                    if abs(count) == 4:
+                        return (True, 1 if count == 4 else -1)
 
-        # No casella lliure -> Empat -> Estat final
-        # Casella lliure -> Peçes per posar -> No final
-        return not casella_lliure
+        return (final, 0)
 
     def genera_fills(self, cambia_jugador: bool = False) -> List["EstatBase"]:
         return [
@@ -219,7 +217,7 @@ class AgentProfunditat(joc.Agent):
 
     def actua(
         self, percepcio: entorn.Percepcio
-    ) -> entorn.Accio | tuple[entorn.Accio, object]:
+    ) -> entorn.Accio | Tuple[entorn.Accio, object]:
         if self.__accions is None:
             self._cerca(
                 EstatProfunditat(
@@ -229,9 +227,6 @@ class AgentProfunditat(joc.Agent):
                 )
             )
 
-        # Return the solution from the leave to the root
-        return self.__accions.pop() if self.__accions else Accio.ESPERAR
-        # Return the solution from the root to the leaves, but teacher method doesn't detect the solution properly
         return self.__accions.pop(0) if self.__accions else Accio.ESPERAR
 
     def _cerca(self, estat: EstatProfunditat):
@@ -244,7 +239,7 @@ class AgentProfunditat(joc.Agent):
             if self.__tancats.add(actual):
                 continue
 
-            if actual.es_meta():
+            if actual.es_meta()[0]:
                 self.__accions = actual.accions_previes()
             else:
                 fills = [
@@ -267,7 +262,7 @@ class AgentAEstrella(joc.Agent):
 
     def actua(
         self, percepcio: entorn.Percepcio
-    ) -> entorn.Accio | tuple[entorn.Accio, object]:
+    ) -> entorn.Accio | Tuple[entorn.Accio, object]:
         if self.__accions is None:
             self._cerca(
                 EstatAEstrella(
@@ -277,9 +272,6 @@ class AgentAEstrella(joc.Agent):
                 )
             )
 
-        # Return the solution from the leave to the root
-        return self.__accions.pop() if self.__accions else Accio.ESPERAR
-        # Return the solution from the root to the leaves, but teacher method doesn't detect the solution properly
         return self.__accions.pop(0) if self.__accions else Accio.ESPERAR
 
     def _cerca(self, estat: EstatAEstrella):
@@ -294,7 +286,7 @@ class AgentAEstrella(joc.Agent):
             if self.__tancats.add(actual):
                 continue
 
-            if actual.es_meta():
+            if actual.es_meta()[0]:
                 self.__accions = actual.accions_previes()
             else:
                 for hijo in actual.genera_fills():
@@ -305,16 +297,13 @@ class AgentAEstrella(joc.Agent):
 class AgentMinMax(joc.Agent):
     def __init__(self, nom):
         super(AgentMinMax, self).__init__(nom)
-        self.__accions = None
-        self.__oberts = None
-        self.__tancats = None
 
     def pinta(self, display):
         pass
 
     def actua(
         self, percepcio: entorn.Percepcio
-    ) -> entorn.Accio | tuple[entorn.Accio, object]:
+    ) -> entorn.Accio | Tuple[entorn.Accio, object]:
         pass
 
     def _cerca(self, estat: EstatMinMax):
