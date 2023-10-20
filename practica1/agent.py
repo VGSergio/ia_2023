@@ -58,11 +58,6 @@ class EstatBase:
     def __repr__(self) -> str:
         return str(self)
 
-    def __cambia_jugador(self) -> TipusCasella:
-        return (
-            TipusCasella.CARA if self._tipus == TipusCasella.CREU else TipusCasella.CREU
-        )
-
     # Devuelve una copia del estado actual actualizado con el movimiento pasado por argumento
     def __fer_accio(
         self, accio: Tuple[Accio.POSAR, Tuple[int, int]]
@@ -76,6 +71,11 @@ class EstatBase:
     def __legal(self, accio: Tuple[Accio.POSAR, Tuple[int, int]]) -> bool:
         _, pos = accio
         return self._taulell[pos[0]][pos[1]] == TipusCasella.LLIURE
+
+    def _cambia_jugador(self) -> TipusCasella:
+        return (
+            TipusCasella.CARA if self._tipus == TipusCasella.CREU else TipusCasella.CREU
+        )
 
     def accions_previes(self) -> List[TipusPosarPeça]:
         return self._accions_previes
@@ -126,7 +126,7 @@ class EstatBase:
             self.__class__(
                 taulell=self.__fer_accio(accio),
                 n=self._n,
-                tipus=self._tipus if not cambia_jugador else self.__cambia_jugador(),
+                tipus=self._tipus if not cambia_jugador else self._cambia_jugador(),
                 pare=self,
                 accions_previes=self._accions_previes + [accio],
             )
@@ -140,7 +140,7 @@ class EstatProfunditat(EstatBase):
         self,
         taulell: List[List[TipusCasella]],
         tipus: TipusCasella,
-        n: Optional[int] = None,
+        n: int = None,
         pare: Optional[EstatBase] = None,
         accions_previes: Optional[List[TipusPosarPeça]] = None,
     ) -> None:
@@ -152,7 +152,7 @@ class EstatAEstrella(EstatBase):
         self,
         taulell: List[List[TipusCasella]],
         tipus: TipusCasella,
-        n: Optional[int] = None,
+        n: int = None,
         pare: Optional[EstatBase] = None,
         accions_previes: Optional[List[TipusPosarPeça]] = None,
     ) -> None:
