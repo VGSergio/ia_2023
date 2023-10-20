@@ -71,7 +71,7 @@ class Casella:
 
 
 class Taulell(joc.Joc):
-    def __init__(self, agents: list[Agent] | Agent, mida_taulell: tuple[int, int] = (12, 12)):
+    def __init__(self, agents: list[Agent] | Agent, mida_taulell: tuple[int, int] = (8, 8)):
         super(Taulell, self).__init__((800, 800), agents, title="Pràctica 1")
 
         self.__caselles = []
@@ -106,6 +106,10 @@ class Taulell(joc.Joc):
 
             if accio is Accio.POSAR:
                 pos_x, pos_y = params
+                if not (0 <= pos_x < len(self.__caselles) and 0 <= pos_y < len(
+                        self.__caselles[0])):
+                    raise ValueError(f"Posició {params} fora dels límits")
+
                 self.__caselles[pos_x][pos_y].posa(agent_actual.jugador)
                 self.acabat = self.__ha_guanyat((pos_x, pos_y))
 
@@ -126,7 +130,7 @@ class Taulell(joc.Joc):
         pos_x, pos_y = posicio
 
         horizontal_check = self.__linear_check(pos_x, pos_y, self.agent_actual)
-        vertical_check = self.__linear_check(pos_x, pos_y, self.agent_actual, reverse=True)
+        vertical_check = self.__linear_check(pos_y, pos_x, self.agent_actual, reverse=True)
 
         diagonal_check_tl = self.__diagonal_check(pos_x, pos_y, self.agent_actual, (+1, -1))
         diagonal_check_tr = self.__diagonal_check(pos_x, pos_y, self.agent_actual, (+1, +1))
@@ -137,14 +141,14 @@ class Taulell(joc.Joc):
         continu = False
         count = 0
         best_lineal = 0
-        verbose = False
 
         for i, j in zip(
-                range(pos_1 - ( 4 * desp[0]), pos_1 + (4 * desp[0]), desp[0]),
-                range(pos_2 - ( 4 * desp[1]), pos_2 + (4 * desp[1]), desp[1])
+                range(pos_1 - (4 * desp[0]), pos_1 + (4 * desp[0]), desp[0]),
+                range(pos_2 - (4 * desp[1]), pos_2 + (4 * desp[1]), desp[1])
         ):
-            if verbose:
-                print(i, j)
+            if not (0 <= i < len(self.__caselles) and 0 <= j < len(self.__caselles[0])):
+                continue
+
             if self.__caselles[i][j].tipus is agent.jugador:
                 if not continu:
                     continu = True
