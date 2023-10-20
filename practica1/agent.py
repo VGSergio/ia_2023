@@ -1,5 +1,5 @@
 from collections import deque
-from copy import deepcopy
+from typing import List, Optional, Tuple
 from queue import PriorityQueue
 import time
 
@@ -7,30 +7,32 @@ from ia_2022 import entorn
 from practica1 import joc
 from practica1.entorn import Accio, SENSOR, TipusCasella
 
+# Definim un tipus per la colocació de una peça
+TipusPosarPeça = Tuple[Accio, Tuple[int, int]]
 
-class EstatProfunditat:
+class EstatBase:
     def __init__(
         self,
-        taulell: str,
+        taulell: List[List[TipusCasella]],
         tipus: TipusCasella,
-        n=None,
-        pare=None,
-        accions_previes=None,
+        n: int,
+        pare: Optional["EstatBase"] = None,
+        accions_previes: Optional[List[TipusPosarPeça]] = None,
     ) -> None:
-        self.__taulell = taulell
-        self.__n = n
-        self.__tipus = tipus
-        self.__pare = pare
-        self.__accions_previes = accions_previes or []
-        self.__acc_pos = [
+        self._taulell = taulell
+        self._n = n
+        self._tipus = tipus
+        self._pare = pare
+        self._accions_previes = accions_previes or []
+        self._acc_pos = [
             (Accio.POSAR, (row, col)) for row in range(n) for col in range(n)
         ]
 
     def __hash__(self) -> int:
-        return hash(self.__str__)
+        return hash(str(self))
 
-    def __eq__(self, other: "EstatProfunditat") -> bool:
-        return self.__taulell == other.__taulell
+    def __eq__(self, other: "EstatBase") -> bool:
+        return self._taulell == other._taulell
 
     def __str__(self) -> str:
         return "\n" + (
@@ -46,48 +48,33 @@ class EstatProfunditat:
                             for col in row
                         ]
                     )
-                    for row in self.__taulell
+                    for row in self._taulell
                 ]
             )
             + "\n"
         )
 
     def __repr__(self) -> str:
-        return "\n" + (
-            "\n".join(
-                [
-                    " ".join(
-                        [
-                            "_"
-                            if col == TipusCasella.LLIURE
-                            else "O"
-                            if col == TipusCasella.CARA
-                            else "X"
-                            for col in row
-                        ]
-                    )
-                    for row in self.__taulell
-                ]
-            )
-            + "\n"
-        )
+        return str(self)
 
-    def __fer_accio(self, accio: tuple[Accio.POSAR, tuple[int, int]]) -> str:
+    def __fer_accio(
+        self, accio: Tuple[Accio.POSAR, Tuple[int, int]]
+    ) -> List[List[TipusCasella]]:
         _, pos = accio
-        taulell = self.__taulell
-        taulell[pos[0]][pos[1]] = self.__tipus
+        taulell = [row[:] for row in self._taulell]  # Copies the grid
+        taulell[pos[0]][pos[1]] = self._tipus
         return taulell
 
-    def __legal(self, accio: tuple[Accio.POSAR, tuple[int, int]]) -> bool:
+    def __legal(self, accio: Tuple[Accio.POSAR, Tuple[int, int]]) -> bool:
         _, pos = accio
-        return self.__taulell[pos[0]][pos[1]] == TipusCasella.LLIURE
+        return self._taulell[pos[0]][pos[1]] == TipusCasella.LLIURE
 
-    def accions_previes(self):
-        return self.__accions_previes
+    def accions_previes(self) -> List[TipusPosarPeça]:
+        return self._accions_previes
 
     def es_meta(self) -> bool:
-        n = self.__n
-        taulell = self.__taulell
+        n = self._n
+        taulell = self._taulell
 
         for i in range(n):
             for j in range(n):
@@ -97,14 +84,14 @@ class EstatProfunditat:
                     continue
 
                 directions = [
-                    (0, -1),  # left
+                    # (0, -1),  # left
                     (0, 1),  # right
-                    (-1, 0),  # top
+                    # (-1, 0),  # top
                     (1, 0),  # down
                     (-1, 1),  # diagonal top right
                     (1, 1),  # diagonal bottom right
-                    (1, -1),  # diagonal bottom left
-                    (-1, -1),  # diagonal bottom left
+                    # (1, -1),  # diagonal bottom left
+                    # (-1, -1), # diagonal bottom left
                 ]
 
                 for dx, dy in directions:
@@ -120,103 +107,52 @@ class EstatProfunditat:
 
         return False
 
-    def genera_fills(self) -> list["EstatProfunditat"]:
+    def genera_fills(self) -> List["EstatBase"]:
         return [
-            EstatProfunditat(
-                taulell=deepcopy(self).__fer_accio(accio),
-                n=self.__n,
-                tipus=self.__tipus,
+            self.__class__(
+                taulell=self.__fer_accio(accio),
+                n=self._n,
+                tipus=self._tipus,
                 pare=self,
-                accions_previes=self.__accions_previes + [accio],
+                accions_previes=self._accions_previes + [accio],
             )
-            for accio in self.__acc_pos
+            for accio in self._acc_pos
             if self.__legal(accio)
         ]
 
 
-class EstatAEstrella:
+class EstatProfunditat(EstatBase):
     def __init__(
         self,
-        taulell: str,
+        taulell: List[List[TipusCasella]],
         tipus: TipusCasella,
-        n=None,
-        pare=None,
-        accions_previes=None,
+        n: Optional[int] = None,
+        pare: Optional[EstatBase] = None,
+        accions_previes: Optional[List[TipusPosarPeça]] = None,
     ) -> None:
-        self.__taulell = taulell
-        self.__n = n
-        self.__tipus = tipus
-        self.__pare = pare
-        self.__accions_previes = accions_previes or []
+        super().__init__(taulell, tipus, n, pare, accions_previes)
+
+
+class EstatAEstrella(EstatBase):
+    def __init__(
+        self,
+        taulell: List[List[TipusCasella]],
+        tipus: TipusCasella,
+        n: Optional[int] = None,
+        pare: Optional[EstatBase] = None,
+        accions_previes: Optional[List[TipusPosarPeça]] = None,
+    ) -> None:
+        super().__init__(taulell, tipus, n, pare, accions_previes)
         self.__cost = pare.__cost + 1 if pare else 0
         self.__heuristica = self.__calcul_heuristica() if accions_previes else 1000
-        self.__acc_pos = [
-            (Accio.POSAR, (row, col)) for row in range(n) for col in range(n)
-        ]
-
-    def __hash__(self) -> int:
-        return hash(self.__str__)
-
-    def __eq__(self, other: "EstatAEstrella") -> bool:
-        return self.__taulell == other.__taulell
-
-    def __str__(self) -> str:
-        return "\n" + (
-            "\n".join(
-                [
-                    " ".join(
-                        [
-                            "_"
-                            if col == TipusCasella.LLIURE
-                            else "O"
-                            if col == TipusCasella.CARA
-                            else "X"
-                            for col in row
-                        ]
-                    )
-                    for row in self.__taulell
-                ]
-            )
-            + "\n"
-        )
-
-    def __repr__(self) -> str:
-        return "\n" + (
-            "\n".join(
-                [
-                    " ".join(
-                        [
-                            "_"
-                            if col == TipusCasella.LLIURE
-                            else "O"
-                            if col == TipusCasella.CARA
-                            else "X"
-                            for col in row
-                        ]
-                    )
-                    for row in self.__taulell
-                ]
-            )
-            + "\n"
-        )
 
     def __lt__(self, other: "EstatAEstrella") -> int:
         return self.__heuristica - other.__heuristica
 
-    def __fer_accio(self, accio: tuple[Accio.POSAR, tuple[int, int]]) -> str:
-        _, pos = accio
-        taulell = self.__taulell
-        taulell[pos[0]][pos[1]] = self.__tipus
-        return taulell
-
-    def __legal(self, accio: tuple[Accio.POSAR, tuple[int, int]]) -> bool:
-        _, pos = accio
-        return self.__taulell[pos[0]][pos[1]] == TipusCasella.LLIURE
-
     def __calcul_heuristica(self) -> int:
-        n = self.__n
-        taulell = self.__taulell
-        row, col = self.__accions_previes[-1][1]
+        n = self._n
+        taulell = self._taulell
+        row, col = self._accions_previes[-1][1]
         casella = taulell[row][col]
         count = 0
 
@@ -243,57 +179,6 @@ class EstatAEstrella:
 
         return 4 * 4 - 1 - count
 
-    def accions_previes(self):
-        return self.__accions_previes
-
-    def es_meta(self) -> bool:
-        n = self.__n
-        taulell = self.__taulell
-
-        for i in range(n):
-            for j in range(n):
-                casella = taulell[i][j]
-
-                if casella == TipusCasella.LLIURE:
-                    continue
-
-                directions = [
-                    (0, -1),  # left
-                    (0, 1),  # right
-                    (-1, 0),  # top
-                    (1, 0),  # down
-                    (-1, 1),  # diagonal top right
-                    (1, 1),  # diagonal bottom right
-                    (1, -1),  # diagonal bottom left
-                    (-1, -1),  # diagonal bottom left
-                ]
-
-                for dx, dy in directions:
-                    count = 0
-                    x, y = i, j
-
-                    while 0 <= x < n and 0 <= y < n and taulell[x][y] == casella:
-                        count += 1
-                        x, y = x + dx, y + dy
-
-                    if count >= 4:
-                        return True
-
-        return False
-
-    def genera_fills(self) -> list["EstatAEstrella"]:
-        return [
-            EstatAEstrella(
-                taulell=deepcopy(self).__fer_accio(accio),
-                n=self.__n,
-                tipus=self.__tipus,
-                pare=self,
-                accions_previes=self.__accions_previes + [accio],
-            )
-            for accio in self.__acc_pos
-            if self.__legal(accio)
-        ]
-
     def valor(self) -> int:
         return self.__cost + self.__heuristica
 
@@ -312,17 +197,13 @@ class AgentProfunditat(joc.Agent):
         self, percepcio: entorn.Percepcio
     ) -> entorn.Accio | tuple[entorn.Accio, object]:
         if self.__accions is None:
-            while True:
-                start = time.time()
-                self._cerca(
-                    EstatProfunditat(
-                        taulell=percepcio[SENSOR.TAULELL],
-                        n=percepcio[SENSOR.MIDA][0],
-                        tipus=self.jugador,
-                    )
+            self._cerca(
+                EstatProfunditat(
+                    taulell=percepcio[SENSOR.TAULELL],
+                    n=percepcio[SENSOR.MIDA][0],
+                    tipus=self.jugador,
                 )
-                print(time.time() - start)
-                self.__accions = None
+            )
 
         # Return the solution from the leave to the root
         return self.__accions.pop() if self.__accions else Accio.ESPERAR
@@ -364,18 +245,13 @@ class AgentAEstrella(joc.Agent):
         self, percepcio: entorn.Percepcio
     ) -> entorn.Accio | tuple[entorn.Accio, object]:
         if self.__accions is None:
-            while True:
-                start = time.time()
-
-                self._cerca(
-                    EstatAEstrella(
-                        taulell=percepcio[SENSOR.TAULELL],
-                        n=percepcio[SENSOR.MIDA][0],
-                        tipus=self.jugador,
-                    )
+            self._cerca(
+                EstatAEstrella(
+                    taulell=percepcio[SENSOR.TAULELL],
+                    n=percepcio[SENSOR.MIDA][0],
+                    tipus=self.jugador,
                 )
-
-                print(time.time() - start)
+            )
 
         # Return the solution from the leave to the root
         return self.__accions.pop() if self.__accions else Accio.ESPERAR
