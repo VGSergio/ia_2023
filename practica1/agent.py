@@ -1,7 +1,6 @@
 from collections import deque
 from typing import List, Optional, Tuple
 from queue import PriorityQueue
-import time
 
 from ia_2022 import entorn
 from practica1 import joc
@@ -249,7 +248,6 @@ class EstatMinMax(EstatBase):
                 if eval > millor_valor:
                     millor_valor = eval
                     millor_accio = fill._accions_previes[0]
-            return millor_accio
         else:
             millor_valor = MAX
             for fill in self.genera_fills(True):
@@ -257,7 +255,7 @@ class EstatMinMax(EstatBase):
                 if eval < millor_valor:
                     millor_valor = eval
                     millor_accio = fill._accions_previes[0]
-            return millor_accio
+        return millor_accio
 
 
 class AgentProfunditat(joc.Agent):
