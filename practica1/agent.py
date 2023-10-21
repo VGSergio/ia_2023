@@ -202,7 +202,53 @@ class EstatAEstrella(EstatBase):
 
 
 class EstatMinMax(EstatBase):
-    pass
+    def __init__(
+        self,
+        taulell: List[List[TipusCasella]],
+        tipus: TipusCasella,
+        n: int = None,
+        pare: Optional[EstatBase] = None,
+        accions_previes: Optional[List[TipusPosarPeça]] = None,
+    ) -> None:
+        super().__init__(taulell, tipus, n, pare, accions_previes)
+
+    def minimax(self, alpha, beta, maximizingPlayer, visitedNodes: set):
+        final, score = self.es_meta()
+        if final or not visitedNodes.add(self):
+            return score
+
+        MAX = 10000
+        if maximizingPlayer:
+            max_eval = -MAX
+            for fill in self.genera_fills(True):
+                eval = fill.minimax(alpha, beta, not maximizingPlayer, visitedNodes)
+                max_eval = max(max_eval, eval)
+                alpha = max(alpha, eval)
+                if alpha >= beta:
+                    break
+            return max_eval
+        else:
+            min_eval = MAX
+            for fill in self.genera_fills(True):
+                eval = fill.minimax(alpha, beta, not maximizingPlayer, visitedNodes)
+                min_eval = min(min_eval, eval)
+                beta = min(beta, eval)
+                if alpha >= beta:
+                    break
+            return min_eval
+
+    def millor_accio(self):
+        MAX = 10000
+        millor_accio = None
+        millor_valor = -MAX
+        visited = set()
+        visited.add(self)
+        for fill in self.genera_fills(True):
+            eval = fill.minimax(-MAX, MAX, False, visited)
+            if eval > millor_valor:
+                millor_valor = eval
+                millor_accio = fill._accions_previes[0]
+        return millor_accio
 
 
 class AgentProfunditat(joc.Agent):
@@ -304,7 +350,11 @@ class AgentMinMax(joc.Agent):
     def actua(
         self, percepcio: entorn.Percepcio
     ) -> entorn.Accio | Tuple[entorn.Accio, object]:
-        pass
-
-    def _cerca(self, estat: EstatMinMax):
-        pass
+        estat_actual = EstatMinMax(
+            taulell=percepcio[SENSOR.TAULELL],
+            n=percepcio[SENSOR.MIDA][0],
+            tipus=self.jugador,
+        )
+        millor_accio = estat_actual.millor_accio()
+        print(f"{self.jugador}, {millor_accio}")
+        return millor_accio if millor_accio else Accio.ESPERAR
