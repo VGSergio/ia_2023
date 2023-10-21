@@ -86,7 +86,6 @@ class EstatBase:
         n = self._n
         taulell = self._taulell
         final = True
-        contrari = self._cambia_jugador()
 
         for i in range(n):
             for j in range(n):
@@ -108,9 +107,9 @@ class EstatBase:
                     x, y = i, j
 
                     while 0 <= x < n and 0 <= y < n:
-                        if taulell[x][y] == self._tipus:
+                        if taulell[x][y] == TipusCasella.CARA:
                             count += 1
-                        if taulell[x][y] == contrari:
+                        if taulell[x][y] == TipusCasella.CREU:
                             count -= 1
                         x, y = x + dx, y + dy
 
@@ -223,7 +222,7 @@ class EstatMinMax(EstatBase):
             for fill in self.genera_fills(True):
                 eval = fill.minimax(alpha, beta, not maximizingPlayer, visitedNodes)
                 max_eval = max(max_eval, eval)
-                alpha = max(alpha, eval)
+                alpha = max(alpha, max_eval)
                 if alpha >= beta:
                     break
             return max_eval
@@ -232,23 +231,33 @@ class EstatMinMax(EstatBase):
             for fill in self.genera_fills(True):
                 eval = fill.minimax(alpha, beta, not maximizingPlayer, visitedNodes)
                 min_eval = min(min_eval, eval)
-                beta = min(beta, eval)
+                beta = min(beta, min_eval)
                 if alpha >= beta:
                     break
             return min_eval
 
-    def millor_accio(self):
+    def millor_accio(self, maximizing: bool):
         MAX = 10000
         millor_accio = None
-        millor_valor = -MAX
         visited = set()
         visited.add(self)
-        for fill in self.genera_fills(True):
-            eval = fill.minimax(-MAX, MAX, False, visited)
-            if eval > millor_valor:
-                millor_valor = eval
-                millor_accio = fill._accions_previes[0]
-        return millor_accio
+
+        if maximizing:
+            millor_valor = -MAX
+            for fill in self.genera_fills(True):
+                eval = fill.minimax(-MAX, MAX, not maximizing, visited)
+                if eval > millor_valor:
+                    millor_valor = eval
+                    millor_accio = fill._accions_previes[0]
+            return millor_accio
+        else:
+            millor_valor = MAX
+            for fill in self.genera_fills(True):
+                eval = fill.minimax(-MAX, MAX, not maximizing, visited)
+                if eval < millor_valor:
+                    millor_valor = eval
+                    millor_accio = fill._accions_previes[0]
+            return millor_accio
 
 
 class AgentProfunditat(joc.Agent):
@@ -355,6 +364,5 @@ class AgentMinMax(joc.Agent):
             n=percepcio[SENSOR.MIDA][0],
             tipus=self.jugador,
         )
-        millor_accio = estat_actual.millor_accio()
-        print(f"{self.jugador}, {millor_accio}")
+        millor_accio = estat_actual.millor_accio(self.jugador == TipusCasella.CARA)
         return millor_accio if millor_accio else Accio.ESPERAR
