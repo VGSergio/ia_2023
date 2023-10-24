@@ -85,35 +85,33 @@ class EstatBase:
         n = self._n
         taulell = self._taulell
         final = True
+        contrari = self._cambia_jugador()
+        directions = [
+            (0, 1),  # right
+            (1, 0),  # down
+            (-1, 1),  # diagonal top right
+            (1, 1),  # diagonal bottom right
+        ]
 
         for i in range(n):
             for j in range(n):
-                casella = taulell[i][j]
-
-                if casella == TipusCasella.LLIURE:
+                if taulell[i][j] == TipusCasella.LLIURE:
                     final = False
                     continue
 
-                directions = [
-                    (0, 1),  # right
-                    (1, 0),  # down
-                    (-1, 1),  # diagonal top right
-                    (1, 1),  # diagonal bottom right
-                ]
-
                 for dx, dy in directions:
                     count = 0
-                    x, y = i, j
+                    for k in range(4):
+                        x, y = i + k * dx, j + k * dy
 
-                    while 0 <= x < n and 0 <= y < n:
-                        if taulell[x][y] == TipusCasella.CARA:
-                            count += 1
-                        if taulell[x][y] == TipusCasella.CREU:
-                            count -= 1
-                        x, y = x + dx, y + dy
+                        if 0 <= x < n and 0 <= y < n:
+                            if taulell[x][y] == self._tipus:
+                                count += 1
+                            if taulell[x][y] == contrari:
+                                count -= 1
 
                     if abs(count) == 4:
-                        return (True, 1 if count == 4 else -1)
+                        return (True, count / 4)
 
         return (final, 0)
 
@@ -210,12 +208,18 @@ class EstatMinMax(EstatBase):
     ) -> None:
         super().__init__(taulell, tipus, n, pare, accions_previes)
 
+    def _calcul_heuristica(self) -> int:
+        return 1
+
     def minimax(self, alpha, beta, maximizingPlayer, visitedNodes: set):
         final, score = self.es_meta()
         if final or not visitedNodes.add(self):
+            if score == 0:
+                return 0
+            score = score if maximizingPlayer else -score
             return score
 
-        MAX = 10000
+        MAX = float("inf")
         if maximizingPlayer:
             max_eval = -MAX
             for fill in self.genera_fills(True):
@@ -235,26 +239,20 @@ class EstatMinMax(EstatBase):
                     break
             return min_eval
 
-    def millor_accio(self, maximizing: bool):
-        MAX = 10000
+    def millor_accio(self):
+        MAX = float("inf")
+
+        millor_valor = -MAX
         millor_accio = None
+
         visited = set()
         visited.add(self)
 
-        if maximizing:
-            millor_valor = -MAX
-            for fill in self.genera_fills(True):
-                eval = fill.minimax(-MAX, MAX, not maximizing, visited)
-                if eval > millor_valor:
-                    millor_valor = eval
-                    millor_accio = fill._accions_previes[0]
-        else:
-            millor_valor = MAX
-            for fill in self.genera_fills(True):
-                eval = fill.minimax(-MAX, MAX, not maximizing, visited)
-                if eval < millor_valor:
-                    millor_valor = eval
-                    millor_accio = fill._accions_previes[0]
+        for fill in self.genera_fills(True):
+            eval = fill.minimax(-MAX, MAX, False, visited)
+            if eval > millor_valor:
+                millor_valor = eval
+                millor_accio = fill._accions_previes[0]
         return millor_accio
 
 
@@ -362,5 +360,8 @@ class AgentMinMax(joc.Agent):
             n=percepcio[SENSOR.MIDA][0],
             tipus=self.jugador,
         )
-        millor_accio = estat_actual.millor_accio(self.jugador == TipusCasella.CARA)
-        return millor_accio if millor_accio else Accio.ESPERAR
+        if estat_actual.es_meta()[0]:
+            return Accio.ESPERAR
+        else:
+            millor_accio = estat_actual.millor_accio()
+            return millor_accio
