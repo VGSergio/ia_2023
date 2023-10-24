@@ -79,41 +79,42 @@ class EstatBase:
     def accions_previes(self) -> List[TipusPosarPeça]:
         return self._accions_previes
 
-    # Empezando en la esquina superior izquierda, comprueba para cada casilla si hay un grupo de 4 piezas iguales contiguas.
-    # Al empezar en la esquina superior izquierda no comprobamos la parte izquierda ni superior de la casilla analizada
     def es_meta(self) -> Tuple[bool, int]:
+        if not self._accions_previes:
+            return (False, 0)
+
         n = self._n
         taulell = self._taulell
-        final = True
-        contrari = self._cambia_jugador()
+        row, col = self._accions_previes[-1][1]
         directions = [
+            (0, -1),  # left
             (0, 1),  # right
+            (-1, 0),  # top
             (1, 0),  # down
             (-1, 1),  # diagonal top right
             (1, 1),  # diagonal bottom right
+            (1, -1),  # diagonal bottom left
+            (-1, -1),  # diagonal bottom left
         ]
+
+        for dx, dy in directions:
+            count = 0
+            for k in range(4):
+                x, y = row + k * dx, col + k * dy
+
+                if 0 <= x < n and 0 <= y < n:
+                    if taulell[x][y] == self._tipus:
+                        count += 1
+
+            if count == 4:
+                return (True, 1)
 
         for i in range(n):
             for j in range(n):
                 if taulell[i][j] == TipusCasella.LLIURE:
-                    final = False
-                    continue
+                    return (False, 0)
 
-                for dx, dy in directions:
-                    count = 0
-                    for k in range(4):
-                        x, y = i + k * dx, j + k * dy
-
-                        if 0 <= x < n and 0 <= y < n:
-                            if taulell[x][y] == self._tipus:
-                                count += 1
-                            if taulell[x][y] == contrari:
-                                count -= 1
-
-                    if abs(count) == 4:
-                        return (True, count / 4)
-
-        return (final, 0)
+        return (True, 0)
 
     def genera_fills(self, cambia_jugador: bool = False) -> List["EstatBase"]:
         return [
@@ -158,7 +159,7 @@ class EstatAEstrella(EstatBase):
         return self.__heuristica - other.__heuristica
 
     """
-        Cuenta cuentas piezas del mismo tipo hay en cada una de las direcciones 
+        Cuenta cuantas piezas del mismo tipo hay en cada una de las direcciones 
         El máximo de piezas que puede contar es de (4 (conecta 4) - 1 (la pieza colocada)) * 8 (direcciones posibles)
         Para que la heuristica sea menor cuanto más buena sea la posición devolvemos max - count
     """
@@ -182,14 +183,12 @@ class EstatAEstrella(EstatBase):
         ]
 
         for dx, dy in directions:
-            x, y = row + dx, col + dy
+            for k in range(1, 4):
+                x, y = row + k * dx, col + k * dy
 
-            while max(0, row - 3) <= x < min(n, row + 3) and max(0, col - 3) <= y < min(
-                n, col + 3
-            ):
-                if casella == taulell[x][y]:
-                    count += 1
-                x, y = x + dx, y + dy
+                if 0 <= x < n and 0 <= y < n:
+                    if casella == taulell[x][y]:
+                        count += 1
 
         return 3 * len(directions) - count
 
@@ -336,7 +335,7 @@ class AgentAEstrella(joc.Agent):
 
             if self.__tancats.add(actual):
                 continue
-
+            
             if actual.es_meta()[0]:
                 self.__accions = actual.accions_previes()
             else:
