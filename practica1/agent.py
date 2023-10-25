@@ -81,11 +81,13 @@ class EstatBase:
 
     def es_meta(self) -> Tuple[bool, int]:
         if not self._accions_previes:
-            return (False, 0)
-
+            return (False, 0) # Empty board
+        
         n = self._n
         taulell = self._taulell
         row, col = self._accions_previes[-1][1]
+        contrari = self._cambia_jugador()
+
         directions = [
             (0, -1),  # left
             (0, 1),  # right
@@ -103,18 +105,18 @@ class EstatBase:
                 x, y = row + k * dx, col + k * dy
 
                 if 0 <= x < n and 0 <= y < n:
-                    if taulell[x][y] == self._tipus:
+                    if taulell[x][y] == contrari:
                         count += 1
 
             if count == 4:
-                return (True, 1)
+                return (True, 1)  # El contrari va fer un moviment guanyador
 
         for i in range(n):
             for j in range(n):
                 if taulell[i][j] == TipusCasella.LLIURE:
-                    return (False, 0)
+                    return (False, 0)  # Encara es pot jugar
 
-        return (True, 0)
+        return (True, 0)  # Empat
 
     def genera_fills(self, cambia_jugador: bool = False) -> List["EstatBase"]:
         return [
@@ -208,14 +210,14 @@ class EstatMinMax(EstatBase):
         super().__init__(taulell, tipus, n, pare, accions_previes)
 
     def _calcul_heuristica(self) -> int:
-        return 1
+        pass
 
     def minimax(self, alpha, beta, maximizingPlayer, visitedNodes: set):
         final, score = self.es_meta()
         if final or not visitedNodes.add(self):
             if score == 0:
                 return 0
-            score = score if maximizingPlayer else -score
+            score = -score if maximizingPlayer else score
             return score
 
         MAX = float("inf")
@@ -252,6 +254,7 @@ class EstatMinMax(EstatBase):
             if eval > millor_valor:
                 millor_valor = eval
                 millor_accio = fill._accions_previes[0]
+
         return millor_accio
 
 
@@ -335,7 +338,7 @@ class AgentAEstrella(joc.Agent):
 
             if self.__tancats.add(actual):
                 continue
-            
+
             if actual.es_meta()[0]:
                 self.__accions = actual.accions_previes()
             else:
@@ -359,6 +362,10 @@ class AgentMinMax(joc.Agent):
             n=percepcio[SENSOR.MIDA][0],
             tipus=self.jugador,
         )
+
+        # millor_accio = estat_actual.millor_accio(self.jugador == TipusCasella.CARA)
+        # return millor_accio if millor_accio else Accio.ESPERAR
+
         if estat_actual.es_meta()[0]:
             return Accio.ESPERAR
         else:
