@@ -81,8 +81,8 @@ class EstatBase:
 
     def es_meta(self) -> Tuple[bool, int]:
         if not self._accions_previes:
-            return (False, 0) # Empty board
-        
+            return (False, 0)  # Empty board
+
         n = self._n
         taulell = self._taulell
         row, col = self._accions_previes[-1][1]
@@ -199,6 +199,8 @@ class EstatAEstrella(EstatBase):
 
 
 class EstatMinMax(EstatBase):
+    global_visited_nodes = set()
+
     def __init__(
         self,
         taulell: List[List[TipusCasella]],
@@ -209,22 +211,26 @@ class EstatMinMax(EstatBase):
     ) -> None:
         super().__init__(taulell, tipus, n, pare, accions_previes)
 
-    def _calcul_heuristica(self) -> int:
-        pass
+    def minimax(self, alpha, beta, maximizingPlayer):
+        visited_nodes = EstatMinMax.global_visited_nodes
+        if len(visited_nodes) % 50000 == 0 and len(visited_nodes) > 0:
+            print(f"Calculando {len(visited_nodes)} iteraciones")
 
-    def minimax(self, alpha, beta, maximizingPlayer, visitedNodes: set):
         final, score = self.es_meta()
-        if final or not visitedNodes.add(self):
+
+        if final or self in visited_nodes:
             if score == 0:
                 return 0
             score = -score if maximizingPlayer else score
             return score
 
+        visited_nodes.add(self)
+
         MAX = float("inf")
         if maximizingPlayer:
             max_eval = -MAX
             for fill in self.genera_fills(True):
-                eval = fill.minimax(alpha, beta, not maximizingPlayer, visitedNodes)
+                eval = fill.minimax(alpha, beta, not maximizingPlayer)
                 max_eval = max(max_eval, eval)
                 alpha = max(alpha, max_eval)
                 if alpha >= beta:
@@ -233,7 +239,7 @@ class EstatMinMax(EstatBase):
         else:
             min_eval = MAX
             for fill in self.genera_fills(True):
-                eval = fill.minimax(alpha, beta, not maximizingPlayer, visitedNodes)
+                eval = fill.minimax(alpha, beta, not maximizingPlayer)
                 min_eval = min(min_eval, eval)
                 beta = min(beta, min_eval)
                 if alpha >= beta:
@@ -244,13 +250,13 @@ class EstatMinMax(EstatBase):
         MAX = float("inf")
 
         millor_valor = -MAX
-        millor_accio = None
+        millor_accio = Accio.ESPERAR
 
-        visited = set()
-        visited.add(self)
+        EstatMinMax.global_visited_nodes = set()
+        EstatMinMax.global_visited_nodes.add(self)
 
         for fill in self.genera_fills(True):
-            eval = fill.minimax(-MAX, MAX, False, visited)
+            eval = fill.minimax(-MAX, MAX, False)
             if eval > millor_valor:
                 millor_valor = eval
                 millor_accio = fill._accions_previes[0]
@@ -362,9 +368,6 @@ class AgentMinMax(joc.Agent):
             n=percepcio[SENSOR.MIDA][0],
             tipus=self.jugador,
         )
-
-        # millor_accio = estat_actual.millor_accio(self.jugador == TipusCasella.CARA)
-        # return millor_accio if millor_accio else Accio.ESPERAR
 
         if estat_actual.es_meta()[0]:
             return Accio.ESPERAR
