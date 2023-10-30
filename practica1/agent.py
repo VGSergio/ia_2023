@@ -184,7 +184,7 @@ class EstatAEstrella(EstatBase):
         ]
 
         for dx, dy in directions:
-            for k in range(1, 4):
+            for k in range(4):
                 x, y = row + k * dx, col + k * dy
 
                 if 0 <= x < n and 0 <= y < n:
@@ -228,7 +228,7 @@ class EstatMinMax(EstatBase):
                 for dx, dy in directions:
                     count = 0
                     bloqueado = False
-                    for k in range(1, 4):
+                    for k in range(4):
                         x, y = i + k * dx, j + k * dy
 
                         if 0 <= x < n and 0 <= y < n:
