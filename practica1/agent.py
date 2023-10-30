@@ -213,12 +213,10 @@ class EstatMinMax(EstatBase):
 
     def minimax(self, alpha, beta, maximizingPlayer, depth: int = 1):
         visited_nodes = EstatMinMax.global_visited_nodes
-        if len(visited_nodes) % 50000 == 0 and len(visited_nodes) > 0:
-            print(f"Calculando {len(visited_nodes)} iteraciones")
 
         final, score = self.es_meta()
 
-        if final or self in visited_nodes or depth == 4:
+        if final or depth == 4:
             if score == 0:
                 return 0
             score = -score if maximizingPlayer else score
@@ -230,20 +228,22 @@ class EstatMinMax(EstatBase):
         if maximizingPlayer:
             max_eval = -MAX
             for fill in self.genera_fills(True):
-                eval = fill.minimax(alpha, beta, not maximizingPlayer, depth + 1)
-                max_eval = max(max_eval, eval)
-                alpha = max(alpha, max_eval)
-                if alpha >= beta:
-                    break
+                if fill not in visited_nodes:
+                    eval = fill.minimax(alpha, beta, not maximizingPlayer, depth + 1)
+                    max_eval = max(max_eval, eval)
+                    alpha = max(alpha, max_eval)
+                    if alpha >= beta:
+                        break
             return max_eval
         else:
             min_eval = MAX
             for fill in self.genera_fills(True):
-                eval = fill.minimax(alpha, beta, not maximizingPlayer, depth + 1)
-                min_eval = min(min_eval, eval)
-                beta = min(beta, min_eval)
-                if alpha >= beta:
-                    break
+                if fill not in visited_nodes:
+                    eval = fill.minimax(alpha, beta, not maximizingPlayer, depth + 1)
+                    min_eval = min(min_eval, eval)
+                    beta = min(beta, min_eval)
+                    if alpha >= beta:
+                        break
             return min_eval
 
     def millor_accio(self):
@@ -256,10 +256,11 @@ class EstatMinMax(EstatBase):
         EstatMinMax.global_visited_nodes.add(self)
 
         for fill in self.genera_fills(True):
-            eval = fill.minimax(-MAX, MAX, False)
-            if eval > millor_valor:
-                millor_valor = eval
-                millor_accio = fill._accions_previes[0]
+            if fill not in EstatMinMax.global_visited_nodes:
+                eval = fill.minimax(-MAX, MAX, False)
+                if eval > millor_valor:
+                    millor_valor = eval
+                    millor_accio = fill._accions_previes[0]
 
         return millor_accio
 
