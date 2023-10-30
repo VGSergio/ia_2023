@@ -71,8 +71,8 @@ class Casella:
 
 
 class Taulell(joc.Joc):
-    def __init__(self, agents: list[Agent] | Agent, mida_taulell: tuple[int, int] = (4, 4)):
-        super(Taulell, self).__init__((400, 400), agents, title="Pràctica 1")
+    def __init__(self, agents: list[Agent] | Agent, mida_taulell: tuple[int, int] = (8, 8)):
+        super(Taulell, self).__init__((800, 800), agents, title="Pràctica 1")
 
         self.__caselles = []
         self.__mida_taulell = mida_taulell
