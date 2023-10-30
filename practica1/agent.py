@@ -211,14 +211,14 @@ class EstatMinMax(EstatBase):
     ) -> None:
         super().__init__(taulell, tipus, n, pare, accions_previes)
 
-    def minimax(self, alpha, beta, maximizingPlayer):
+    def minimax(self, alpha, beta, maximizingPlayer, depth: int = 1):
         visited_nodes = EstatMinMax.global_visited_nodes
         if len(visited_nodes) % 50000 == 0 and len(visited_nodes) > 0:
             print(f"Calculando {len(visited_nodes)} iteraciones")
 
         final, score = self.es_meta()
 
-        if final or self in visited_nodes:
+        if final or self in visited_nodes or depth == 4:
             if score == 0:
                 return 0
             score = -score if maximizingPlayer else score
@@ -230,7 +230,7 @@ class EstatMinMax(EstatBase):
         if maximizingPlayer:
             max_eval = -MAX
             for fill in self.genera_fills(True):
-                eval = fill.minimax(alpha, beta, not maximizingPlayer)
+                eval = fill.minimax(alpha, beta, not maximizingPlayer, depth + 1)
                 max_eval = max(max_eval, eval)
                 alpha = max(alpha, max_eval)
                 if alpha >= beta:
@@ -239,7 +239,7 @@ class EstatMinMax(EstatBase):
         else:
             min_eval = MAX
             for fill in self.genera_fills(True):
-                eval = fill.minimax(alpha, beta, not maximizingPlayer)
+                eval = fill.minimax(alpha, beta, not maximizingPlayer, depth + 1)
                 min_eval = min(min_eval, eval)
                 beta = min(beta, min_eval)
                 if alpha >= beta:
