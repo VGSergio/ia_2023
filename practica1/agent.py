@@ -80,36 +80,35 @@ class EstatBase:
         return self._accions_previes
 
     def es_meta(self) -> Tuple[bool, int]:
-        if not self._accions_previes:
-            return (False, 0)  # Empty board
-
         n = self._n
         taulell = self._taulell
-        row, col = self._accions_previes[-1][1]
         contrari = self._cambia_jugador()
 
         directions = [
-            (0, -1),  # left
             (0, 1),  # right
-            (-1, 0),  # top
             (1, 0),  # down
             (-1, 1),  # diagonal top right
             (1, 1),  # diagonal bottom right
-            (1, -1),  # diagonal bottom left
-            (-1, -1),  # diagonal bottom left
         ]
 
-        for dx, dy in directions:
-            count = 0
-            for k in range(4):
-                x, y = row + k * dx, col + k * dy
+        for i in range(n):
+            for j in range(n):
+                for dx, dy in directions:
+                    count = 0
+                    for k in range(4):
+                        x, y = i + k * dx, j + k * dy
 
-                if 0 <= x < n and 0 <= y < n:
-                    if taulell[x][y] == contrari:
-                        count += 1
+                        if 0 <= x < n and 0 <= y < n:
+                            if taulell[x][y] == self._tipus:
+                                count += 1
+                            if taulell[x][y] == contrari:
+                                count -= 1
 
-            if count == 4:
-                return (True, 1)  # El contrari va fer un moviment guanyador
+                    if abs(count) == 4:
+                        return (
+                            True,
+                            count / 4 * 1000,
+                        )  # El contrari va fer un moviment guanyador
 
         for i in range(n):
             for j in range(n):
@@ -211,24 +210,53 @@ class EstatMinMax(EstatBase):
     ) -> None:
         super().__init__(taulell, tipus, n, pare, accions_previes)
 
+    def _calcul_heuristica(self) -> int:
+        n = self._n
+        taulell = self._taulell
+        contrari = self._cambia_jugador()
+        countBloqueos = 0
+
+        directions = [
+            (0, 1),  # right
+            (1, 0),  # down
+            (-1, 1),  # diagonal top right
+            (1, 1),  # diagonal bottom right
+        ]
+
+        for i in range(n):
+            for j in range(n):
+                for dx, dy in directions:
+                    count = 0
+                    bloqueado = False
+                    for k in range(1, 4):
+                        x, y = i + k * dx, j + k * dy
+
+                        if 0 <= x < n and 0 <= y < n:
+                            if taulell[x][y] == contrari:
+                                count += 1
+                            if taulell[x][y] == self._tipus:
+                                bloqueado = True
+
+                    if bloqueado and count == 3:
+                        countBloqueos += 1
+
+        return countBloqueos
+
     def minimax(self, alpha, beta, maximizingPlayer, depth: int = 1):
         visited_nodes = EstatMinMax.global_visited_nodes
 
         final, score = self.es_meta()
-
         if final or depth == 4:
-            if score == 0:
-                return 0
-            score = -score if maximizingPlayer else score
-            return score
+            return score if final else self._calcul_heuristica()
 
-        visited_nodes.add(self)
-
+        fills = self.genera_fills(True)
         MAX = float("inf")
+
         if maximizingPlayer:
             max_eval = -MAX
-            for fill in self.genera_fills(True):
+            for fill in fills:
                 if fill not in visited_nodes:
+                    visited_nodes.add(fill)
                     eval = fill.minimax(alpha, beta, not maximizingPlayer, depth + 1)
                     max_eval = max(max_eval, eval)
                     alpha = max(alpha, max_eval)
@@ -237,8 +265,9 @@ class EstatMinMax(EstatBase):
             return max_eval
         else:
             min_eval = MAX
-            for fill in self.genera_fills(True):
+            for fill in fills:
                 if fill not in visited_nodes:
+                    visited_nodes.add(fill)
                     eval = fill.minimax(alpha, beta, not maximizingPlayer, depth + 1)
                     min_eval = min(min_eval, eval)
                     beta = min(beta, min_eval)
@@ -257,6 +286,7 @@ class EstatMinMax(EstatBase):
 
         for fill in self.genera_fills(True):
             if fill not in EstatMinMax.global_visited_nodes:
+                EstatMinMax.global_visited_nodes.add(fill)
                 eval = fill.minimax(-MAX, MAX, False)
                 if eval > millor_valor:
                     millor_valor = eval
